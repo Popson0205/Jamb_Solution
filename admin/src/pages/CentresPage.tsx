@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function CentresPage() {
+  const { ready } = useAuth();
   const [centres, setCentres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -9,18 +11,13 @@ export default function CentresPage() {
   const [filterState, setFilterState] = useState('');
 
   useEffect(() => {
+    if (!ready) return;
     setLoading(true); setError('');
     axios.get('/api/admin/centres')
-      .then(r => {
-        // Guard: ensure response is always an array
-        setCentres(Array.isArray(r.data) ? r.data : []);
-      })
-      .catch(e => {
-        setError(e.response?.data?.error || 'Failed to load centres. Check API connection and database seed.');
-        setCentres([]);
-      })
+      .then(r => { setCentres(Array.isArray(r.data) ? r.data : []); })
+      .catch(e => { setError(e.response?.data?.error || 'Failed to load centres.'); setCentres([]); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [ready]);
 
   const states = [...new Set(centres.map(c => c.state))].sort();
   const filtered = centres.filter(c =>
@@ -33,8 +30,6 @@ export default function CentresPage() {
       <h1 style={{ fontSize: '22px', marginBottom: '16px' }}>
         Centres <span style={{ fontSize: '14px', color: '#666', fontWeight: 'normal' }}>({filtered.length} of {centres.length})</span>
       </h1>
-
-      {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input placeholder="Search name or LGA..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', width: '280px' }} />
@@ -48,18 +43,11 @@ export default function CentresPage() {
             style={{ padding: '8px 14px', background: '#888', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Clear</button>
         )}
       </div>
-
-      {/* Error */}
       {error && (
         <div style={{ background: '#fde8e8', color: '#c0392b', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
           ⚠️ {error}
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-            Make sure you have run <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: '3px' }}>psql $DATABASE_URL -f seed.sql</code> against your Neon database.
-          </div>
         </div>
       )}
-
-      {/* Table */}
       <div style={{ background: 'white', borderRadius: '8px', overflow: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
@@ -74,7 +62,7 @@ export default function CentresPage() {
               <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#666' }}>Loading centres...</td></tr>
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#999' }}>
-                {error ? 'Could not load centres.' : centres.length === 0 ? 'No centres in database. Run seed.sql first.' : 'No centres match your search.'}
+                {error ? 'Could not load centres.' : centres.length === 0 ? 'No centres found. Run seed.sql first.' : 'No centres match your search.'}
               </td></tr>
             ) : filtered.map((c, i) => (
               <tr key={c.id || i} style={{ background: i % 2 === 0 ? '#f9f9f9' : 'white', borderBottom: '1px solid #eee' }}>
@@ -93,12 +81,9 @@ export default function CentresPage() {
           </tbody>
         </table>
       </div>
-
-      {/* Summary footer */}
       {!loading && !error && centres.length > 0 && (
         <div style={{ marginTop: '12px', fontSize: '12px', color: '#888', textAlign: 'right' }}>
-          Showing {filtered.length.toLocaleString()} of {centres.length.toLocaleString()} centres
-          {filterState && ` in ${filterState}`}
+          Showing {filtered.length.toLocaleString()} of {centres.length.toLocaleString()} centres{filterState && ` in ${filterState}`}
         </div>
       )}
     </div>

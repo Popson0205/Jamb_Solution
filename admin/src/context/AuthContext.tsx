@@ -4,9 +4,14 @@ import axios from 'axios';
 interface AuthContextType { token: string | null; user: any; login: (email: string, password: string) => Promise<void>; logout: () => void; }
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
+function safeParseJSON(value: string | null): any {
+  if (!value || value === 'undefined' || value === 'null') return null;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('jamb_admin_token'));
-  const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('jamb_admin_user') || 'null'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem('jamb_admin_token') || null);
+  const [user, setUser] = useState<any>(safeParseJSON(localStorage.getItem('jamb_admin_user')));
 
   const login = async (email: string, password: string) => {
     const res = await axios.post('/api/admin/auth/login', { email, password });
@@ -18,7 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setToken(null); setUser(null);
-    localStorage.removeItem('jamb_admin_token'); localStorage.removeItem('jamb_admin_user');
+    localStorage.removeItem('jamb_admin_token');
+    localStorage.removeItem('jamb_admin_user');
     delete axios.defaults.headers.common['Authorization'];
   };
 

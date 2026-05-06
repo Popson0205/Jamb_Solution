@@ -7,7 +7,7 @@ services:
     startCommand: cd api && node dist/server.js
     envVars:
       - key: DATABASE_URL
-        sync: false          # Set manually in Render dashboard — use your Neon connection string
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: NODE_ENV
@@ -21,30 +21,22 @@ services:
       - key: ADMIN_URL
         sync: false
 
-  - type: static
+  - type: web
     name: jamb-student-pwa
+    env: node
     plan: free
-    buildCommand: cd client && npm install && npm run build
-    staticPublishPath: client/dist
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    buildCommand: cd client && npm install && npm run build && npm install -g serve
+    startCommand: serve -s client/dist -l 10000
+    envVars:
+      - key: NODE_ENV
+        value: production
 
-  - type: static
+  - type: web
     name: jamb-admin-portal
+    env: node
     plan: free
-    buildCommand: cd admin && npm install && npm run build
-    staticPublishPath: admin/dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-
-# Database is hosted on Neon (neon.tech) — NOT Render.
-# Create your Neon project at https://neon.tech and paste the
-# connection string into DATABASE_URL above.
+    buildCommand: cd admin && npm install && npm run build && npm install -g serve
+    startCommand: serve -s admin/dist -l 10000
+    envVars:
+      - key: NODE_ENV
+        value: production

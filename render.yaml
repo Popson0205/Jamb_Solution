@@ -10,7 +10,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
-        generateValue: true
+        sync: false        # Set manually in Render dashboard — never auto-generate
       - key: NODE_ENV
         value: production
       - key: TERMII_API_KEY

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function AllocationsPage() {
   const [data, setData] = useState<any[]>([]);
@@ -10,6 +11,7 @@ export default function AllocationsPage() {
   const [error, setError] = useState('');
   const [reassignId, setReassignId] = useState<string | null>(null);
   const [reassignForm, setReassignForm] = useState({ centre_id: '', exam_date: '', batch_number: '1', notes: '' });
+  const { ready } = useAuth();
   const [centres, setCentres] = useState<any[]>([]);
 
   const fetchData = async () => {
@@ -25,8 +27,9 @@ export default function AllocationsPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [page, filters]);
+  useEffect(() => { if (ready) fetchData(); }, [page, filters, ready]);
   useEffect(() => {
+    if (!ready) return;
     axios.get('/api/admin/centres')
       .then(r => setCentres(Array.isArray(r.data) ? r.data : []))
       .catch(() => setCentres([]));

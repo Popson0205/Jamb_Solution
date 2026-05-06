@@ -4,6 +4,7 @@ import axios from 'axios';
 interface AuthContextType {
   token: string | null;
   user: any;
+  ready: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -22,10 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(
     safeParseJSON(localStorage.getItem('jamb_admin_user'))
   );
+  // ready = interceptor is registered, safe to make API calls
+  const [ready, setReady] = useState(false);
 
-  // ── Attach token to every request via interceptor (survives re-renders)
   useEffect(() => {
-    const interceptor = axios.interceptors.request.use((config) => {
+    // Register request interceptor — attaches token to every request
+    const reqInterceptor = axios.interceptors.request.use((config) => {
       const t = localStorage.getItem('jamb_admin_token');
       if (t) {
         config.headers = config.headers || {};
@@ -33,26 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return config;
     });
-    return () => axios.interceptors.request.eject(interceptor);
-  }, []);
 
-  // ── Handle 401 responses — auto logout
-  useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      (res) => res,
-      (err) => {
-        if (err.response?.status === 401) {
-          // Token expired or invalid — clear and redirect to login
-          localStorage.removeItem('jamb_admin_token');
-          localStorage.removeItem('jamb_admin_user');
-          setToken(null);
-          setUser(null);
-          window.location.href = '/login';
-        }
-        return Promise.reject(err);
-      }
-    );
-    return () => axios.interceptors.response.eject(interceptor);
+    // Mark ready AFTER interceptor is registered
+    setReady(true);
+
+    return () => axios.interceptors.request.eject(reqInterceptor);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -72,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, ready, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

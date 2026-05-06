@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: jamb-allocator-api
+    env: node
+    plan: free
+    rootDir: api
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false        # Set manually in Render dashboard — never auto-generate
+      - key: NODE_ENV
+        value: production
+      - key: TERMII_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: ADMIN_URL
+        sync: false
+
+  - type: web
+    name: jamb-student-pwa
+    env: node
+    plan: free
+    rootDir: client
+    buildCommand: npm install --include=dev && npm run build && npm install -g serve
+    startCommand: serve -s dist -l 10000
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        sync: false
+
+  - type: web
+    name: jamb-admin-portal
+    env: node
+    plan: free
+    rootDir: admin
+    buildCommand: npm install --include=dev && npm run build && npm install -g serve
+    startCommand: serve -s dist -l 10000
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        sync: false

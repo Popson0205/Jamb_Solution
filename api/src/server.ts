@@ -11,36 +11,38 @@ import adminRouter from './routes/admin';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ── CORS
-// In production, allow any *.onrender.com subdomain + explicit env var origins
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
-  /\.onrender\.com$/,   // covers all Render subdomains automatically
+  /\.onrender\.com$/,
   'http://localhost:5173',
   'http://localhost:5174',
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
-    const allowed = allowedOrigins.some(o => {
+    const allowed = allowedOrigins.some((o: any) => {
       if (!o) return false;
       if (o instanceof RegExp) return o.test(origin);
       return o === origin;
     });
     if (allowed) return callback(null, true);
     console.warn(`CORS blocked: ${origin}`);
-    callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+// Must be BEFORE all other middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json());
 
-// Rate limiting on registration only
 app.use('/api/student/register', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -56,8 +58,8 @@ app.get('/health', (_req, res) => res.json({
   env: process.env.NODE_ENV,
 }));
 
-// 404 handler
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
 app.listen(PORT, () => console.log(`🚀 JAMB API running on port ${PORT}`));
+
 export default app;

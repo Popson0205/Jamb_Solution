@@ -14,22 +14,15 @@ const PORT = process.env.PORT || 3001;
 // ── CORS — allow all *.onrender.com subdomains + explicit env var origins
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, mobile, server-to-server)
     if (!origin) return callback(null, true);
-
     const allowed = [
       process.env.CLIENT_URL,
       process.env.ADMIN_URL,
       'http://localhost:5173',
       'http://localhost:5174',
     ];
-
-    // Allow any *.onrender.com subdomain
     if (/\.onrender\.com$/.test(origin)) return callback(null, true);
-
-    // Allow explicitly listed origins
     if (allowed.includes(origin)) return callback(null, true);
-
     console.warn(`CORS blocked: ${origin}`);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },

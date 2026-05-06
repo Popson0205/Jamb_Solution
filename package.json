@@ -1,0 +1,11 @@
+{
+  "name": "jamb-cbt-allocator",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["api", "client", "admin"],
+  "scripts": {
+    "dev:api": "cd api && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:admin": "cd admin && npm run dev"
+  }
+}

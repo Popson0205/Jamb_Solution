@@ -1,0 +1,39 @@
+{
+  "name": "jamb-api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate": "knex migrate:latest --knexfile src/db/knexfile.ts",
+    "seed": "psql $DATABASE_URL -f ../seed.sql"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "knex": "^3.1.0",
+    "pg": "^8.11.3",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "puppeteer": "^21.5.2",
+    "axios": "^1.6.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.2",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.0.2",
+    "@types/express": "^4.17.21",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/pg": "^8.10.9",
+    "@types/cors": "^2.8.17",
+    "@types/uuid": "^9.0.7",
+    "@types/nodemailer": "^6.4.14",
+    "@types/node": "^20.10.0"
+  }
+}

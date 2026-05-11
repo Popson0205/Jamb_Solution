@@ -61,6 +61,34 @@ app.get('/health', (_req, res) => res.json({
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
+
+// ── Debug: test email (public — remove after confirming email works)
+app.get('/test-email', async (_req, res) => {
+  const nodemailer = require('nodemailer');
+  const result: any = {
+    key_set: !!process.env.SENDGRID_API_KEY,
+    from: process.env.SENDGRID_FROM_EMAIL || 'NOT SET',
+  };
+  if (!process.env.SENDGRID_API_KEY) {
+    return res.json({ ...result, error: 'SENDGRID_API_KEY not set in Render environment' });
+  }
+  try {
+    const t = nodemailer.createTransport({
+      host: 'smtp.sendgrid.net', port: 587,
+      auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
+    });
+    const info = await t.sendMail({
+      from: `"JAMB Test" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng'}>`,
+      to: 'roqeebateniolailiasu@gmail.com',
+      subject: 'JAMB Email Test',
+      html: '<p>✅ Email is working from JAMB CBT API.</p>',
+    });
+    return res.json({ ...result, status: 'sent', messageId: info.messageId, response: info.response });
+  } catch (err: any) {
+    return res.json({ ...result, status: 'failed', error: err.message, code: err.code });
+  }
+});
+
 // ── Keep Neon DB alive (pings every 4 min — Neon pauses after 5 min idle)
 setInterval(async () => {
   try {

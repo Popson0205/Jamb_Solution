@@ -58,7 +58,9 @@ function buildEmailHTML(d: AllocationDetails): string {
 }
 
 export async function sendAllocationNotifications(details: AllocationDetails): Promise<void> {
-  const smsText = `JAMB CBT ALLOCATION\nName: ${details.student.full_name}\nReg: ${details.student.reg_number}\nCentre: ${details.centre.name}\nAddress: ${details.centre.address}, ${details.centre.lga}, ${details.centre.state}\nDate: ${details.exam_date}\nBatch ${details.batch.number}: Arrive ${details.batch.arrival} | Exam ${details.batch.exam_start}-${details.batch.exam_end}\nDistance: ${details.distance_km}km\n\nArrive 30 mins early. Bring ID + this slip.`;
+  // Strip seconds from time strings e.g. "07:00:00" → "07:00"
+  const ft = (t: string) => (t || '').substring(0, 5);
+  const smsText = `JAMB CBT ALLOCATION\nName: ${details.student.full_name}\nReg: ${details.student.reg_number}\nCentre: ${details.centre.name}\nAddress: ${details.centre.address}, ${details.centre.lga}, ${details.centre.state}\nDate: ${details.exam_date}\nBatch ${details.batch.number}: Arrive ${ft(details.batch.arrival)} | Exam ${ft(details.batch.exam_start)}-${ft(details.batch.exam_end)}\nDistance: ${details.distance_km}km\n\nArrive 30 mins early. Bring your JAMB slip + valid ID.`;
 
   await Promise.allSettled([
     details.student.phone ? sendSMS(details.student.phone, smsText) : Promise.resolve(),

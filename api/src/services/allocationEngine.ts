@@ -74,7 +74,21 @@ export async function allocateStudent(input: StudentInput) {
     const existingAlloc = await db('allocations').where('student_id', studentId).first();
     if (existingAlloc) {
       const centre = await db('centres').where('id', existingAlloc.centre_id).first();
-      return { status: 'already_allocated', allocation: existingAlloc, centre };
+      const batchRow = await db('batches').where('batch_number', existingAlloc.batch_number).first();
+      return {
+        status: 'already_allocated',
+        allocation: existingAlloc,
+        centre,
+        batch: {
+          number: existingAlloc.batch_number,
+          arrival_time: batchRow?.arrival_time || existingAlloc.arrival_time,
+          arrival: batchRow?.arrival_time || existingAlloc.arrival_time,
+          exam_start: batchRow?.exam_start || existingAlloc.exam_start,
+          exam_end: batchRow?.exam_end || existingAlloc.exam_end,
+        },
+        exam_date: existingAlloc.exam_date,
+        distance_km: existingAlloc.distance_km,
+      };
     }
   } else {
     const [student] = await db('students').insert({

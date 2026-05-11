@@ -7,6 +7,7 @@ dotenv.config();
 
 import studentRouter from './routes/student';
 import adminRouter from './routes/admin';
+import { db } from './db';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,7 +37,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-// Must be BEFORE all other middleware
+// Preflight must be BEFORE all other middleware
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
@@ -59,6 +60,16 @@ app.get('/health', (_req, res) => res.json({
 }));
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
+
+// ── Keep Neon DB alive (pings every 4 min — Neon pauses after 5 min idle)
+setInterval(async () => {
+  try {
+    await db.raw('SELECT 1');
+    console.log(`[${new Date().toISOString()}] DB keep-alive OK`);
+  } catch (err: any) {
+    console.error('DB keep-alive failed:', err.message);
+  }
+}, 4 * 60 * 1000);
 
 app.listen(PORT, () => console.log(`🚀 JAMB API running on port ${PORT}`));
 

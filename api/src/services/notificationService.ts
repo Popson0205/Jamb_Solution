@@ -1,4 +1,4 @@
-import axios from 'axios';
+import twilio from 'twilio';
 import nodemailer from 'nodemailer';
 
 interface AllocationDetails {
@@ -10,15 +10,19 @@ interface AllocationDetails {
 }
 
 async function sendSMS(phone: string, message: string): Promise<void> {
-  if (!process.env.TERMII_API_KEY || !phone) return;
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !phone) return;
   try {
-    await axios.post('https://api.ng.termii.com/api/sms/send', {
-      to: phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`,
-      from: process.env.TERMII_SENDER_ID || 'JAMB',
-      sms: message, type: 'plain',
-      api_key: process.env.TERMII_API_KEY, channel: 'generic',
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const to = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+    await client.messages.create({
+      body: message,
+      from: process.env.TWILIO_FROM_NUMBER!,
+      to,
     });
-  } catch (err: any) { console.error('SMS error:', err?.response?.data || err.message); }
+    console.log(`SMS sent to ${to}`);
+  } catch (err: any) {
+    console.error('Twilio SMS error:', err.message);
+  }
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
@@ -38,7 +42,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
 function buildEmailHTML(d: AllocationDetails): string {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px">
     <div style="background:#006400;color:white;padding:16px 24px;border-radius:6px 6px 0 0;text-align:center"><h1 style="margin:0;font-size:22px">JAMB CBT Exam Allocation</h1></div>
-    <div style="padding:24px"><p>Dear <strong>${d.student.full_name}</strong>,</p><p>Your exam has been allocated:</p>
+    <div style="padding:24px"><p>Dear <strong>${d.student.full_name}</strong>,</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
       <tr style="background:#f5f5f5"><td style="padding:10px;font-weight:bold;width:40%">Reg Number</td><td style="padding:10px">${d.student.reg_number}</td></tr>
       <tr><td style="padding:10px;font-weight:bold">Centre</td><td style="padding:10px">${d.centre.name}</td></tr>
@@ -54,7 +58,8 @@ function buildEmailHTML(d: AllocationDetails): string {
 }
 
 export async function sendAllocationNotifications(details: AllocationDetails): Promise<void> {
-  const smsText = `JAMB CBT ALLOCATION\nName: ${details.student.full_name}\nCentre: ${details.centre.name}\nDate: ${details.exam_date}\nBatch ${details.batch.number}: Arrive ${details.batch.arrival}, Exam ${details.batch.exam_start}-${details.batch.exam_end}\nAddress: ${details.centre.address}`;
+  const smsText = `JAMB CBT ALLOCATION\nName: ${details.student.full_name}\nReg: ${details.student.reg_number}\nCentre: ${details.centre.name}\nAddress: ${details.centre.address}, ${details.centre.lga}, ${details.centre.state}\nDate: ${details.exam_date}\nBatch ${details.batch.number}: Arrive ${details.batch.arrival} | Exam ${details.batch.exam_start}-${details.batch.exam_end}\nDistance: ${details.distance_km}km\n\nArrive 30 mins early. Bring ID + this slip.`;
+
   await Promise.allSettled([
     details.student.phone ? sendSMS(details.student.phone, smsText) : Promise.resolve(),
     details.student.email ? sendEmail(details.student.email, `JAMB CBT Allocation - ${details.student.reg_number}`, buildEmailHTML(details)) : Promise.resolve(),

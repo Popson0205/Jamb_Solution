@@ -16,6 +16,24 @@ function safeParseJSON(value: string | null): any {
   try { return JSON.parse(value); } catch { return null; }
 }
 
+// Retry wrapper — retries up to 3 times with 2s delay between attempts
+// Handles cold-start CORS failures gracefully
+export async function fetchWithRetry(fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isNetworkError = !err.response; // CORS/network errors have no response
+      const isServerError = err.response?.status >= 500;
+      if ((isNetworkError || isServerError) && i < retries - 1) {
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(
     localStorage.getItem('jamb_admin_token') || null
@@ -23,11 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(
     safeParseJSON(localStorage.getItem('jamb_admin_user'))
   );
-  // ready = interceptor is registered, safe to make API calls
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Register request interceptor — attaches token to every request
     const reqInterceptor = axios.interceptors.request.use((config) => {
       const t = localStorage.getItem('jamb_admin_token');
       if (t) {
@@ -36,10 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return config;
     });
-
-    // Mark ready AFTER interceptor is registered
     setReady(true);
-
     return () => axios.interceptors.request.eject(reqInterceptor);
   }, []);
 

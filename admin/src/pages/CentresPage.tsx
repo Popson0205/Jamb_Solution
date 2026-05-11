@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, fetchWithRetry } from '../context/AuthContext';
 
 export default function CentresPage() {
   const { ready } = useAuth();
@@ -13,9 +13,9 @@ export default function CentresPage() {
   useEffect(() => {
     if (!ready) return;
     setLoading(true); setError('');
-    axios.get('/api/admin/centres')
-      .then(r => { setCentres(Array.isArray(r.data) ? r.data : []); })
-      .catch(e => { setError(e.response?.data?.error || 'Failed to load centres.'); setCentres([]); })
+    fetchWithRetry(() => axios.get('/api/admin/centres'))
+      .then(r => setCentres(Array.isArray(r.data) ? r.data : []))
+      .catch(e => setError(e.response?.data?.error || 'Failed to load centres. The API may be waking up — try refreshing in 30 seconds.'))
       .finally(() => setLoading(false));
   }, [ready]);
 
@@ -44,8 +44,12 @@ export default function CentresPage() {
         )}
       </div>
       {error && (
-        <div style={{ background: '#fde8e8', color: '#c0392b', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
-          ⚠️ {error}
+        <div style={{ background: '#fff3cd', border: '1px solid #ffc107', color: '#856404', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ {error}</span>
+          <button onClick={() => { setError(''); setLoading(true); fetchWithRetry(() => axios.get('/api/admin/centres')).then(r => setCentres(Array.isArray(r.data) ? r.data : [])).catch(e => setError(e.message)).finally(() => setLoading(false)); }}
+            style={{ background: '#856404', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginLeft: '12px' }}>
+            Retry
+          </button>
         </div>
       )}
       <div style={{ background: 'white', borderRadius: '8px', overflow: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
@@ -59,10 +63,12 @@ export default function CentresPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#666' }}>Loading centres...</td></tr>
+              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#666' }}>
+                Loading centres... <span style={{ fontSize: '12px', color: '#999' }}>(API may be waking up, please wait)</span>
+              </td></tr>
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#999' }}>
-                {error ? 'Could not load centres.' : centres.length === 0 ? 'No centres found. Run seed.sql first.' : 'No centres match your search.'}
+                {error ? 'Could not load.' : centres.length === 0 ? 'No centres found.' : 'No match.'}
               </td></tr>
             ) : filtered.map((c, i) => (
               <tr key={c.id || i} style={{ background: i % 2 === 0 ? '#f9f9f9' : 'white', borderBottom: '1px solid #eee' }}>

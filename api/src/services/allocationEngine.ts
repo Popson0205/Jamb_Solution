@@ -58,7 +58,7 @@ async function tryAllocate(studentId: string, centres: any[], date: Date, batche
           batch_number: batch.batch_number, arrival_time: batch.arrival_time,
           exam_start: batch.exam_start, exam_end: batch.exam_end, distance_km: centre.distance_km,
         }).returning('*');
-        return { allocation, centre, batch: { number: batch.batch_number, arrival: batch.arrival_time, exam_start: batch.exam_start, exam_end: batch.exam_end }, exam_date: dateStr, distance_km: centre.distance_km };
+        return { allocation, centre, batch: { number: batch.batch_number, arrival_time: batch.arrival_time, arrival: batch.arrival_time, exam_start: batch.exam_start, exam_end: batch.exam_end }, exam_date: dateStr, distance_km: centre.distance_km };
       }
     }
   }

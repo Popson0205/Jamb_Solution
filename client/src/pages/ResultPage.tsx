@@ -15,7 +15,6 @@ L.Icon.Default.mergeOptions({
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return 'N/A';
-  // Handle both ISO timestamp and plain date string e.g. "2026-05-11" or "2026-05-11T00:00:00.000Z"
   const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
   return d.toDateString();
@@ -23,7 +22,6 @@ function formatDate(dateStr: string): string {
 
 function formatTime(t: string): string {
   if (!t) return 'N/A';
-  // Strip seconds if present e.g. "08:30:00" → "08:30"
   return t.substring(0, 5);
 }
 
@@ -44,13 +42,17 @@ export default function ResultPage() {
 
   const { centre, batch, exam_date, distance_km, allocation } = data;
 
-  // Normalise batch fields — engine returns arrival_time but some paths return arrival
-  const arrivalTime  = formatTime(batch?.arrival_time || batch?.arrival || '');
-  const examStart    = formatTime(batch?.exam_start || '');
-  const examEnd      = formatTime(batch?.exam_end || '');
-  const batchNumber  = batch?.number || batch?.batch_number || allocation?.batch_number || '';
-  const examDateStr  = exam_date || allocation?.exam_date || '';
-  const distanceKm   = distance_km ?? allocation?.distance_km ?? '';
+  const arrivalTime = formatTime(batch?.arrival_time || batch?.arrival || '');
+  const examStart   = formatTime(batch?.exam_start || '');
+  const examEnd     = formatTime(batch?.exam_end || '');
+  const batchNumber = batch?.number || batch?.batch_number || allocation?.batch_number || '';
+  const examDateStr = exam_date || allocation?.exam_date || '';
+  const distanceKm  = distance_km ?? allocation?.distance_km ?? '';
+
+  // Google Maps directions link — opens navigation to the centre
+  const googleMapsUrl = centre?.latitude && centre?.longitude
+    ? `https://www.google.com/maps/dir/?api=1&destination=${centre.latitude},${centre.longitude}&destination_place_id=${encodeURIComponent(centre.name || '')}&travelmode=driving`
+    : null;
 
   const downloadPDF = async () => {
     if (!slipRef.current) return;
@@ -79,12 +81,16 @@ export default function ResultPage() {
       <header style={{ background: '#006400', color: 'white', padding: '16px 24px', textAlign: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '20px' }}>✅ Allocation Successful</h1>
       </header>
+
       <div style={{ maxWidth: '680px', margin: '24px auto', padding: '0 16px' }}>
+
+        {/* Allocation Slip */}
         <div ref={slipRef} style={{ background: 'white', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '2px solid #006400' }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #006400', paddingBottom: '12px', marginBottom: '16px' }}>
             <h2 style={{ color: '#006400', margin: 0, fontSize: '16px' }}>JOINT ADMISSIONS AND MATRICULATION BOARD</h2>
             <p style={{ margin: '4px 0 0', color: '#666', fontSize: '13px' }}>CBT Examination Allocation Slip</p>
           </div>
+
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <tbody>
               {rows.map(([label, value], i) => (
@@ -95,22 +101,63 @@ export default function ResultPage() {
               ))}
             </tbody>
           </table>
-          <div style={{ marginTop: '16px', padding: '12px', background: '#fff3cd', borderRadius: '4px', fontSize: '13px', color: '#856404' }}>
+
+          {/* Google Maps button — inside the slip */}
+          {googleMapsUrl && (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                marginTop: '16px', padding: '12px', background: '#4285F4',
+                color: 'white', borderRadius: '6px', textDecoration: 'none',
+                fontWeight: 'bold', fontSize: '14px',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              Get Directions to Exam Centre on Google Maps
+            </a>
+          )}
+
+          <div style={{ marginTop: '12px', padding: '12px', background: '#fff3cd', borderRadius: '4px', fontSize: '13px', color: '#856404' }}>
             ⚠️ Arrive at least 30 minutes before your scheduled arrival time. Bring this slip and a valid ID.
           </div>
         </div>
 
-        {/* Map */}
+        {/* Mini map preview */}
         {centre?.latitude && centre?.longitude && (
-          <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', height: '280px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <MapContainer center={[centre.latitude, centre.longitude]} zoom={14} style={{ height: '100%', width: '100%' }}>
+          <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', height: '260px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', position: 'relative' }}>
+            <MapContainer center={[centre.latitude, centre.longitude]} zoom={15} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
               <Marker position={[centre.latitude, centre.longitude]} />
             </MapContainer>
+            {/* Overlay Google Maps button on the map */}
+            {googleMapsUrl && (
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                  zIndex: 1000, background: '#4285F4', color: 'white', padding: '8px 16px',
+                  borderRadius: '20px', textDecoration: 'none', fontSize: '13px', fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '6px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                Open in Google Maps
+              </a>
+            )}
           </div>
         )}
 
-        {/* Actions */}
+        {/* Action buttons */}
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
           {[
             ['⬇ Download PDF', downloadPDF, '#006400'],

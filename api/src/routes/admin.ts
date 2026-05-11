@@ -12,8 +12,16 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET!, { expiresIn: '8h' });
+  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET!, { expiresIn: '30d' });
   return res.json({ token, user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } });
+});
+
+
+// POST /api/admin/auth/refresh — get a fresh token using existing valid token
+router.post('/auth/refresh', authMiddleware, async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET!, { expiresIn: '30d' });
+  return res.json({ token });
 });
 
 router.use(authMiddleware);

@@ -8,8 +8,21 @@ import CentresPage from './pages/CentresPage';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const { token, ready } = useAuth();
+
+  // Wait for auth to initialise before making any routing decision
+  if (!ready) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#006400' }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+          <p style={{ margin: 0, fontSize: '14px' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return token ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -23,6 +36,7 @@ export default function App() {
             <Route path="allocations" element={<AllocationsPage />} />
             <Route path="centres" element={<CentresPage />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -89,7 +89,7 @@ app.get('/test-email', async (_req, res) => {
   }
 });
 
-// ── Keep Neon DB alive (pings every 4 min — Neon pauses after 5 min idle)
+// ── Keep Neon DB alive (v2) (pings every 4 min — Neon pauses after 5 min idle)
 setInterval(async () => {
   try {
     await db.raw('SELECT 1');

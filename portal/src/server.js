@@ -25,20 +25,54 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ── API helper
-async function api(method, path, data, token) {
-  try {
-    const res = await axios({
-      method, url: `${API}${path}`, data,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      timeout: 15000,
-    });
-    return { ok: true, data: res.data };
-  } catch (err) {
-    const msg = err.response?.data?.error || err.message;
-    return { ok: false, error: msg, status: err.response?.status };
+// ── API helper with retry (handles Render cold starts)
+async function api(method, path, data, token, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await axios({
+        method, url: `${API}${path}`, data,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 30000, // 30s — enough for Render cold start
+      });
+      return { ok: true, data: res.data };
+    } catch (err) {
+      const isNetwork = !err.response;
+      const isServer = err.response?.status >= 500;
+      if ((isNetwork || isServer) && i < retries - 1) {
+        console.log(`API call failed (attempt ${i+1}), retrying in 3s...`);
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
+      }
+      const msg = err.response?.data?.error || err.message;
+      return { ok: false, error: msg, status: err.response?.status };
+    }
   }
 }
+
+// ── Wake-up middleware — ping API before serving pages
+// This ensures the API is warm before we try to fetch data
+let apiWarm = false;
+let lastPing = 0;
+
+async function ensureAPIWarm() {
+  const now = Date.now();
+  if (apiWarm && now - lastPing < 4 * 60 * 1000) return true; // warm within 4 min
+  try {
+    await axios.get(`${API}/health`, { timeout: 35000 });
+    apiWarm = true;
+    lastPing = now;
+    return true;
+  } catch {
+    apiWarm = false;
+    return false;
+  }
+}
+
+// Warm the API on portal startup
+ensureAPIWarm().then(ok => console.log(`API warm: ${ok}`));
+
+// Keep API warm every 4 minutes from portal side too
+setInterval(() => ensureAPIWarm(), 4 * 60 * 1000);
 
 // ── LOGIN
 app.get('/login', (req, res) => {

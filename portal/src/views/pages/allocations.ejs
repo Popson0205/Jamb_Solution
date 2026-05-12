@@ -1,0 +1,157 @@
+<%
+const totalPages = Math.ceil(total / 50);
+const qs = (extra) => {
+  const p = { search: filters.search, exam_date: filters.exam_date, batch_number: filters.batch_number, state: filters.state, ...extra };
+  return Object.entries(p).filter(([,v]) => v).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+};
+
+const body = `
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Allocations</div>
+    <div class="topbar-subtitle">${total.toLocaleString()} total records</div>
+  </div>
+  <div class="topbar-actions">
+    <a href="/allocations/export?${qs({})}" class="export-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </a>
+  </div>
+</div>
+<div class="content">
+  <!-- Filters -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:16px">
+      <form method="GET" action="/allocations">
+        <div class="filter-row">
+          <div class="form-group search-box" style="flex:2;min-width:200px">
+            <label class="form-label">Search</label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="search" class="form-control" placeholder="Name or reg number..." value="${filters.search}">
+          </div>
+          <div class="form-group" style="min-width:140px">
+            <label class="form-label">Exam Date</label>
+            <input type="date" name="exam_date" class="form-control" value="${filters.exam_date}">
+          </div>
+          <div class="form-group" style="min-width:100px">
+            <label class="form-label">Batch</label>
+            <select name="batch_number" class="form-control">
+              <option value="">All</option>
+              ${[1,2,3,4].map(n => `<option value="${n}" ${filters.batch_number == n ? 'selected' : ''}>Batch ${n}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="min-width:120px">
+            <label class="form-label">State</label>
+            <input type="text" name="state" class="form-control" placeholder="e.g. Lagos" value="${filters.state}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <div style="display:flex;gap:8px">
+              <button type="submit" class="btn btn-primary">Filter</button>
+              <a href="/allocations" class="btn btn-secondary">Clear</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Reg Number</th><th>Full Name</th><th>Centre</th>
+            <th>Date</th><th>Batch</th><th>Times</th>
+            <th>Distance</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allocations.length === 0 ? '<tr><td colspan="9"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg><h3>No allocations found</h3><p>Try adjusting your filters</p></div></td></tr>' :
+          allocations.map(a => `
+          <tr>
+            <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${a.reg_number}</code></td>
+            <td class="td-name">${a.full_name}</td>
+            <td class="td-truncate" title="${a.centre_name || ''}">${a.centre_name || '—'}</td>
+            <td style="white-space:nowrap">${a.exam_date ? new Date(a.exam_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+            <td><span class="badge badge-green">B${a.batch_number}</span></td>
+            <td style="font-size:11px;white-space:nowrap">${(a.arrival_time||'').substring(0,5)} – ${(a.exam_end||'').substring(0,5)}</td>
+            <td>${a.distance_km ? a.distance_km + ' km' : '—'}</td>
+            <td>${a.is_reassigned ? '<span class="badge badge-orange">Reassigned</span>' : '<span class="badge badge-green">Original</span>'}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="openReassign('${a.allocation_id}','${a.exam_date ? a.exam_date.split('T')[0] : ''}','${a.batch_number}')">Reassign</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info">Showing ${((currentPage-1)*50)+1}–${Math.min(currentPage*50, total)} of ${total.toLocaleString()}</div>
+      <div class="pagination-btns">
+        ${currentPage > 1 ? `<a href="/allocations?${qs({page: currentPage-1})}" class="page-btn">← Prev</a>` : '<button class="page-btn" disabled>← Prev</button>'}
+        <span class="page-btn active">${currentPage}</span>
+        ${currentPage < totalPages ? `<a href="/allocations?${qs({page: currentPage+1})}" class="page-btn">Next →</a>` : '<button class="page-btn" disabled>Next →</button>'}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign Modal -->
+<div id="reassign-modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Reassign Student</span>
+      <button class="btn-icon" onclick="closeReassign()">✕</button>
+    </div>
+    <form method="POST" id="reassign-form">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">New Centre</label>
+          <select name="centre_id" id="centre-select" class="form-control" required>
+            <option value="">Loading centres...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Exam Date</label>
+          <input type="date" name="exam_date" id="reassign-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Batch</label>
+          <select name="batch_number" class="form-control" required>
+            ${[1,2,3,4].map(n => `<option value="${n}">Batch ${n} — ${n==1?'08:30–10:30':n==2?'11:00–13:00':n==3?'13:30–15:30':'16:00–18:00'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <textarea name="notes" class="form-control" rows="2" placeholder="Reason for reassignment..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeReassign()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm Reassign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let centres = [];
+fetch('/api/centres').then(r => r.json()).then(data => {
+  centres = data;
+  const sel = document.getElementById('centre-select');
+  sel.innerHTML = '<option value="">Select centre...</option>' + data.map(c => \`<option value="\${c.id}">\${c.name} (\${c.lga}, \${c.state})</option>\`).join('');
+});
+
+function openReassign(id, date, batch) {
+  document.getElementById('reassign-form').action = '/allocations/' + id + '/reassign';
+  document.getElementById('reassign-date').value = date;
+  document.querySelector('[name=batch_number]').value = batch;
+  document.getElementById('reassign-modal').style.display = 'flex';
+}
+function closeReassign() { document.getElementById('reassign-modal').style.display = 'none'; }
+window.onclick = e => { if(e.target.id === 'reassign-modal') closeReassign(); }
+</script>
+`;
+%>
+<%- include('../partials/layout', { title: 'Allocations — JAMB Admin', body, user, page }) %>

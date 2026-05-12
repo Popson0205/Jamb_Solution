@@ -1,0 +1,93 @@
+<%
+const body = `
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Centres</div>
+    <div class="topbar-subtitle">${centres.length.toLocaleString()} of ${total.toLocaleString()} centres</div>
+  </div>
+</div>
+<div class="content">
+  <!-- Filters -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:16px">
+      <form method="GET" action="/centres">
+        <div class="filter-row">
+          <div class="form-group search-box" style="flex:2;min-width:200px">
+            <label class="form-label">Search</label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="search" class="form-control" placeholder="Centre name or LGA..." value="${filters.search}">
+          </div>
+          <div class="form-group" style="min-width:160px">
+            <label class="form-label">State</label>
+            <select name="state" class="form-control">
+              <option value="">All States</option>
+              ${states.map(s => `<option value="${s}" ${filters.state === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <div style="display:flex;gap:8px">
+              <button type="submit" class="btn btn-primary">Filter</button>
+              <a href="/centres" class="btn btn-secondary">Clear</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <span class="card-title">Centre Locations</span>
+      <span class="badge badge-green">${centres.length} shown</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="centres-map"></div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Centre Name</th><th>State</th><th>LGA</th><th>Town</th><th>Capacity/Batch</th><th>Coordinates</th></tr>
+        </thead>
+        <tbody>
+          ${centres.length === 0 ? '<tr><td colspan="7"><div class="empty-state"><h3>No centres found</h3></div></td></tr>' :
+          centres.map((c, i) => `
+          <tr>
+            <td style="color:#aaa;font-size:11px">${i+1}</td>
+            <td class="td-truncate td-name" style="max-width:280px" title="${c.name}">${c.name}</td>
+            <td><span class="badge badge-gray">${c.state}</span></td>
+            <td>${c.lga}</td>
+            <td>${c.town}</td>
+            <td style="text-align:center"><span class="badge badge-green">${c.capacity_per_batch}</span></td>
+            <td style="font-family:monospace;font-size:11px;color:#888">${parseFloat(c.latitude).toFixed(4)}, ${parseFloat(c.longitude).toFixed(4)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const centresData = ${JSON.stringify(centres.map(c => ({ name: c.name, lat: parseFloat(c.latitude), lng: parseFloat(c.longitude), lga: c.lga, state: c.state, cap: c.capacity_per_batch })))};
+
+const map = L.map('centres-map').setView([9.0820, 8.6753], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+const greenIcon = L.divIcon({ className: '', html: '<div style="width:8px;height:8px;background:#006400;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>', iconSize: [8,8], iconAnchor: [4,4] });
+
+centresData.forEach(c => {
+  if (c.lat && c.lng) {
+    L.marker([c.lat, c.lng], { icon: greenIcon })
+      .bindPopup(\`<strong>\${c.name}</strong><br>\${c.lga}, \${c.state}<br>Capacity: \${c.cap}/batch\`)
+      .addTo(map);
+  }
+});
+</script>
+`;
+%>
+<%- include('../partials/layout', { title: 'Centres — JAMB Admin', body, user, page }) %>

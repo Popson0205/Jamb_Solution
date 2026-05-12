@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const axios = require('axios');
 const path = require('path');
 
@@ -13,6 +14,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session({
+  store: new FileStore({
+    path: require('path').join(__dirname, '../sessions'),
+    ttl: 30 * 24 * 60 * 60, // 30 days in seconds
+    retries: 1,
+    logFn: () => {}, // suppress file store logs
+  }),
   secret: process.env.SESSION_SECRET || 'jamb-portal-secret-2026',
   resave: false,
   saveUninitialized: false,

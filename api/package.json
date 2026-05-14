@@ -29,6 +29,7 @@
     "@types/cors": "^2.8.17",
     "@types/uuid": "^9.0.7",
     "@types/nodemailer": "^6.4.14",
-    "@types/node": "^20.10.0"
+    "@types/node": "^20.10.0",
+    "twilio": "^5.0.0"
   }
 }

@@ -152,7 +152,7 @@ app.get('/test-notifications', async (_req, res) => {
   return res.json(results);
 });
 
-// ── Keep Neon DB alive (v2) (pings every 4 min — Neon pauses after 5 min idle)
+// ── Keep Neon DB alive (v3 — build 1778768553) (pings every 4 min — Neon pauses after 5 min idle)
 setInterval(async () => {
   try {
     await db.raw('SELECT 1');

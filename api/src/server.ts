@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import studentRouter from './routes/student';
+import { requestLogger } from './middleware/logger';
 import adminRouter from './routes/admin';
 import { db } from './db';
 
@@ -43,6 +44,9 @@ app.use(cors(corsOptions));
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json());
+
+// ── Request logger — logs every API hit to request_logs table
+app.use(requestLogger);
 
 app.use('/api/student/register', rateLimit({
   windowMs: 15 * 60 * 1000,

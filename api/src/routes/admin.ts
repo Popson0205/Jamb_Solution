@@ -112,3 +112,63 @@ router.patch('/candidates/:id', async (req: Request, res: Response) => {
   const [updated] = await db('candidates').where('id', req.params.id).update({ is_verified }).returning('*');
   return res.json(updated);
 });
+
+// ── Request Logs
+// GET /api/admin/logs
+router.get('/logs', async (req: Request, res: Response) => {
+  const {
+    level = '',
+    path: filterPath = '',
+    status = '',
+    limit = 100,
+    offset = 0,
+    from = '',
+    to = '',
+  } = req.query;
+
+  let query = db('request_logs').orderBy('created_at', 'desc');
+
+  if (level) query = query.where('level', level as string);
+  if (filterPath) query = query.where('path', 'ilike', `%${filterPath}%`);
+  if (status) query = query.where('status_code', Number(status));
+  if (from) query = query.where('created_at', '>=', from as string);
+  if (to) query = query.where('created_at', '<=', to as string);
+
+  const [logs, countResult] = await Promise.all([
+    query.clone().limit(Number(limit)).offset(Number(offset)),
+    query.clone().count('id as count'),
+  ]);
+
+  // Summary stats
+  const stats = await db('request_logs')
+    .select(db.raw('level, COUNT(*) as count'))
+    .groupBy('level');
+
+  const topEndpoints = await db('request_logs')
+    .select('path')
+    .count('id as hits')
+    .groupBy('path')
+    .orderBy('hits', 'desc')
+    .limit(10);
+
+  const avgResponse = await db('request_logs')
+    .avg('duration_ms as avg_ms')
+    .first();
+
+  return res.json({
+    logs,
+    total: Number((countResult[0] as any).count),
+    stats,
+    top_endpoints: topEndpoints,
+    avg_response_ms: Math.round(Number(avgResponse?.avg_ms) || 0),
+  });
+});
+
+// DELETE /api/admin/logs — clear old logs
+router.delete('/logs', async (req: Request, res: Response) => {
+  const { days = 30 } = req.query;
+  const deleted = await db('request_logs')
+    .where('created_at', '<', db.raw(`NOW() - INTERVAL '${Number(days)} days'`))
+    .delete();
+  return res.json({ deleted, message: `Cleared logs older than ${days} days` });
+});

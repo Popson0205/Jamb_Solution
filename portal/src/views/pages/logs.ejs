@@ -1,0 +1,146 @@
+<%
+const levelColor = { info: 'badge-green', warn: 'badge-orange', error: 'badge-red' };
+const statusColor = (s) => s >= 500 ? 'badge-red' : s >= 400 ? 'badge-orange' : s >= 300 ? 'badge-blue' : 'badge-green';
+
+const body = `
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Error & Access Logs</div>
+    <div class="topbar-subtitle">Every API request — live from the backend</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-secondary btn-sm" onclick="clearLogs()">🗑 Clear Old Logs (30d)</button>
+    <button class="btn btn-primary btn-sm" onclick="location.reload()">↻ Refresh</button>
+  </div>
+</div>
+<div class="content">
+
+  <!-- Stats row -->
+  <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="stat-card">
+      <div><div class="stat-label">Total Requests</div><div class="stat-value">${total.toLocaleString()}</div></div>
+      <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Errors (5xx)</div><div class="stat-value" style="color:#c0392b">${stats.find(s=>s.level==='error')?.count || 0}</div></div>
+      <div class="stat-icon" style="background:#fde8e8;color:#c0392b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Warnings (4xx)</div><div class="stat-value" style="color:#e65100">${stats.find(s=>s.level==='warn')?.count || 0}</div></div>
+      <div class="stat-icon" style="background:#fff3e0;color:#e65100"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div><div class="stat-label">Avg Response</div><div class="stat-value">${avg_ms}ms</div></div>
+      <div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+    </div>
+  </div>
+
+  <!-- Top endpoints -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><span class="card-title">Top Endpoints</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Hits</th></tr></thead>
+        <tbody>
+          ${top_endpoints.map(e => `
+          <tr>
+            <td><code style="font-size:12px;background:#f5f5f5;padding:2px 8px;border-radius:4px">${e.path}</code></td>
+            <td><span class="badge badge-green">${parseInt(e.hits).toLocaleString()}</span></td>
+          </tr>`).join('') || '<tr><td colspan="2" style="text-align:center;color:#888;padding:20px">No data yet</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:16px">
+      <form method="GET" action="/logs">
+        <div class="filter-row">
+          <div class="form-group" style="min-width:120px">
+            <label class="form-label">Level</label>
+            <select name="level" class="form-control">
+              <option value="">All</option>
+              <option value="info" ${filters.level==='info'?'selected':''}>Info</option>
+              <option value="warn" ${filters.level==='warn'?'selected':''}>Warning</option>
+              <option value="error" ${filters.level==='error'?'selected':''}>Error</option>
+            </select>
+          </div>
+          <div class="form-group search-box" style="min-width:200px">
+            <label class="form-label">Path</label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="path" class="form-control" placeholder="/api/student/register" value="${filters.path}">
+          </div>
+          <div class="form-group" style="min-width:100px">
+            <label class="form-label">Status</label>
+            <input type="number" name="status" class="form-control" placeholder="e.g. 500" value="${filters.status}">
+          </div>
+          <div class="form-group" style="min-width:150px">
+            <label class="form-label">From</label>
+            <input type="datetime-local" name="from" class="form-control" value="${filters.from}">
+          </div>
+          <div class="form-group" style="min-width:150px">
+            <label class="form-label">To</label>
+            <input type="datetime-local" name="to" class="form-control" value="${filters.to}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <div style="display:flex;gap:8px">
+              <button type="submit" class="btn btn-primary">Filter</button>
+              <a href="/logs" class="btn btn-secondary">Clear</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Logs table -->
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th><th>Method</th><th>Path</th>
+            <th>Status</th><th>Duration</th><th>IP</th>
+            <th>Level</th><th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logs.length === 0 ? '<tr><td colspan="8"><div class="empty-state"><h3>No logs yet</h3><p>Logs appear here as the API receives requests</p></div></td></tr>' :
+          logs.map(l => `
+          <tr>
+            <td style="font-size:11px;white-space:nowrap;color:#888">${new Date(l.created_at).toLocaleString('en-NG', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
+            <td><span class="badge ${l.method==='GET'?'badge-blue':l.method==='POST'?'badge-green':l.method==='DELETE'?'badge-red':'badge-orange'}">${l.method}</span></td>
+            <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${l.path}</code></td>
+            <td><span class="badge ${l.status_code>=500?'badge-red':l.status_code>=400?'badge-orange':l.status_code>=300?'badge-blue':'badge-green'}">${l.status_code}</span></td>
+            <td style="font-size:12px">${l.duration_ms}<span style="color:#aaa">ms</span></td>
+            <td style="font-size:11px;color:#888">${l.ip_address || '—'}</td>
+            <td><span class="badge ${l.level==='error'?'badge-red':l.level==='warn'?'badge-orange':'badge-green'}">${l.level}</span></td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#888" title="${(l.body_summary||'').replace(/"/g,'&quot;')}">${l.body_summary || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info">Showing ${logs.length} of ${total.toLocaleString()} logs</div>
+      <div class="pagination-btns">
+        ${currentOffset > 0 ? `<a href="/logs?level=${filters.level}&path=${filters.path}&status=${filters.status}&offset=${Math.max(0,currentOffset-100)}" class="page-btn">← Prev</a>` : '<button class="page-btn" disabled>← Prev</button>'}
+        <a href="/logs?level=${filters.level}&path=${filters.path}&status=${filters.status}&offset=${currentOffset+100}" class="page-btn ${logs.length < 100 ? 'disabled' : ''}">Next →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function clearLogs() {
+  if (!confirm('Clear all logs older than 30 days?')) return;
+  const res = await fetch('/logs/clear', { method: 'POST' });
+  const data = await res.json();
+  alert(data.message);
+  location.reload();
+}
+</script>
+`;
+%>
+<%- include('../partials/layout', { title: 'Logs — JAMB Admin', body, user, page }) %>

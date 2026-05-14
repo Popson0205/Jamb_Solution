@@ -176,4 +176,29 @@ app.get('/api/centres', requireAuth, async (req, res) => {
   res.json(result.ok ? result.data : []);
 });
 
+
+// ── LOGS
+app.get('/logs', requireAuth, async (req, res) => {
+  const { level = '', path: filterPath = '', status = '', from = '', to = '', offset = 0 } = req.query;
+  const params = new URLSearchParams({ level, path: filterPath, status, from, to, limit: 100, offset });
+  const result = await api('get', `/api/admin/logs?${params}`, null, req.session.token);
+  const data = result.ok ? result.data : { logs: [], total: 0, stats: [], top_endpoints: [], avg_response_ms: 0 };
+  res.render('pages/logs', {
+    user: req.session.user,
+    logs: data.logs || [],
+    total: data.total || 0,
+    stats: data.stats || [],
+    top_endpoints: data.top_endpoints || [],
+    avg_ms: data.avg_response_ms || 0,
+    filters: { level, path: filterPath, status, from, to },
+    currentOffset: parseInt(offset),
+    page: 'logs'
+  });
+});
+
+app.post('/logs/clear', requireAuth, async (req, res) => {
+  const result = await api('delete', '/api/admin/logs?days=30', null, req.session.token);
+  res.json(result.ok ? result.data : { message: 'Failed to clear logs' });
+});
+
 app.listen(PORT, () => console.log(`🏛️ JAMB Portal v2 running on port ${PORT}`));

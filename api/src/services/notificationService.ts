@@ -1,4 +1,3 @@
-import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 
 interface AllocationDetails {
@@ -57,27 +56,28 @@ async function sendSMS(phone: string, message: string): Promise<void> {
   }
 }
 
-// ── Email via SendGrid SMTP
+// ── Email via SendGrid HTTP API (not SMTP — works on Render free tier)
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   if (!process.env.SENDGRID_API_KEY || !to) {
     console.log('Email skipped — SENDGRID_API_KEY not set');
     return;
   }
   try {
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.sendgrid.net',
-      port: 587,
-      auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
-    });
-    await transporter.sendMail({
-      from: `"${process.env.SENDGRID_FROM_NAME || 'JAMB CBT Allocation'}" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng'}>`,
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    await sgMail.send({
       to,
+      from: {
+        email: process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng',
+        name: process.env.SENDGRID_FROM_NAME || 'JAMB CBT Allocation',
+      },
       subject,
       html,
     });
     console.log(`✅ Email sent to ${to}`);
   } catch (err: any) {
-    console.error(`❌ Email failed to ${to}:`, err.message);
+    const detail = err.response?.body?.errors?.[0]?.message || err.message;
+    console.error(`❌ Email failed to ${to}:`, detail);
   }
 }
 

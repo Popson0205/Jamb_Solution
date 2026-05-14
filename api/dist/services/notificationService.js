@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendAllocationNotifications = sendAllocationNotifications;
-const nodemailer_1 = __importDefault(require("nodemailer"));
 const twilio_1 = __importDefault(require("twilio"));
 // Strip seconds: "07:00:00" → "07:00"
 const ft = (t) => (t || '').substring(0, 5);
@@ -55,28 +54,29 @@ async function sendSMS(phone, message) {
         console.error(`❌ SMS failed to ${to}:`, err.message);
     }
 }
-// ── Email via SendGrid SMTP
+// ── Email via SendGrid HTTP API (not SMTP — works on Render free tier)
 async function sendEmail(to, subject, html) {
     if (!process.env.SENDGRID_API_KEY || !to) {
         console.log('Email skipped — SENDGRID_API_KEY not set');
         return;
     }
     try {
-        const transporter = nodemailer_1.default.createTransport({
-            host: 'smtp.sendgrid.net',
-            port: 587,
-            auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
-        });
-        await transporter.sendMail({
-            from: `"${process.env.SENDGRID_FROM_NAME || 'JAMB CBT Allocation'}" <${process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng'}>`,
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        await sgMail.send({
             to,
+            from: {
+                email: process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng',
+                name: process.env.SENDGRID_FROM_NAME || 'JAMB CBT Allocation',
+            },
             subject,
             html,
         });
         console.log(`✅ Email sent to ${to}`);
     }
     catch (err) {
-        console.error(`❌ Email failed to ${to}:`, err.message);
+        const detail = err.response?.body?.errors?.[0]?.message || err.message;
+        console.error(`❌ Email failed to ${to}:`, detail);
     }
 }
 // ── Email HTML template

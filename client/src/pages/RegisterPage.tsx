@@ -98,22 +98,22 @@ export default function RegisterPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Registration Number *</label>
-              <input {...register('reg_number')} placeholder="e.g. 202664221019KQ" style={{ ...inp, fontFamily: 'monospace', letterSpacing: '1px' }} />
+              <label htmlFor="reg_number" style={{ fontSize: '13px', fontWeight: 'bold' }}>Registration Number *</label>
+              <input id="reg_number" {...register('reg_number')} placeholder="e.g. 202664221019KQ" style={{ ...inp, fontFamily: 'monospace', letterSpacing: '1px' }} />
             </div>
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Full Name * <span style={{ fontWeight: 'normal', color: '#888' }}>(as registered with JAMB — SURNAME FIRSTNAME MIDDLENAME)</span></label>
-              <input {...register('full_name')} placeholder="e.g. OKONKWO GABRIEL CORNELIUS" style={{ ...inp, textTransform: 'uppercase' }} />
+              <label htmlFor="full_name" style={{ fontSize: '13px', fontWeight: 'bold' }}>Full Name * <span style={{ fontWeight: 'normal', color: '#888' }}>(as registered with JAMB — SURNAME FIRSTNAME MIDDLENAME)</span></label>
+              <input {...register('full_name')} id="full_name" placeholder="e.g. OKONKWO GABRIEL CORNELIUS" style={{ ...inp, textTransform: 'uppercase' }} />
             </div>
             {[['phone','Phone Number','080XXXXXXXX'],['email','Email Address','you@email.com'],['state','State','e.g. Lagos'],['lga','LGA','e.g. Ikeja']].map(([name, label, ph]) => (
               <div key={name}>
-                <label style={{ fontSize: '13px', fontWeight: 'bold' }}>{label}</label>
-                <input {...register(name as any)} placeholder={ph} style={inp} />
+                <label htmlFor={name} style={{ fontSize: '13px', fontWeight: 'bold' }}>{label}</label>
+                <input id={name} {...register(name as any)} placeholder={ph} style={inp} />
               </div>
             ))}
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Ward <span style={{ fontWeight: 'normal', color: '#888' }}>(Optional)</span></label>
-              <input {...register('ward')} placeholder="e.g. Ward 5" style={inp} />
+              <label htmlFor="ward" style={{ fontSize: '13px', fontWeight: 'bold' }}>Ward <span style={{ fontWeight: 'normal', color: '#888' }}>(Optional)</span></label>
+              <input id="ward" {...register('ward')} placeholder="e.g. Ward 5" style={inp} />
             </div>
           </div>
 

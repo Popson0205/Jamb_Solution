@@ -29,7 +29,7 @@ router.use(authMiddleware);
 router.get('/students', async (req: Request, res: Response) => {
   const { centre_id, exam_date, batch_number, lga, state, search, page = 1, limit = 50 } = req.query;
   let query = db('students as s').join('allocations as a', 's.id', 'a.student_id').join('centres as c', 'a.centre_id', 'c.id')
-    .select('s.*', 'a.exam_date', 'a.batch_number', 'a.arrival_time', 'a.exam_start', 'a.exam_end', 'a.distance_km', 'a.is_reassigned', 'a.id as allocation_id', 'c.name as centre_name', 'c.address as centre_address');
+    .select('s.id', 's.reg_number', 's.full_name', 's.phone', 's.email', 's.state', 's.lga', 's.ward', 's.latitude', 's.longitude', 's.created_at', 'a.exam_date', 'a.batch_number', 'a.arrival_time', 'a.exam_start', 'a.exam_end', 'a.distance_km', 'a.is_reassigned', db.raw('a.id as allocation_id'), 'c.name as centre_name', 'c.address as centre_address');
   if (centre_id) query = query.where('a.centre_id', centre_id as string);
   if (exam_date) query = query.where('a.exam_date', exam_date as string);
   if (batch_number) query = query.where('a.batch_number', Number(batch_number));
@@ -37,7 +37,7 @@ router.get('/students', async (req: Request, res: Response) => {
   if (state) query = query.where('s.state', state as string);
   if (search) query = query.where(function() { this.where('s.full_name', 'ilike', `%${search}%`).orWhere('s.reg_number', 'ilike', `%${search}%`); });
   const offset = (Number(page) - 1) * Number(limit);
-  const [data, countResult] = await Promise.all([query.clone().limit(Number(limit)).offset(offset), query.clone().count('s.id as count')]);
+  const [data, countResult] = await Promise.all([query.clone().limit(Number(limit)).offset(offset), query.clone().clearSelect().clearOrder().count('s.id as count')]);
   return res.json({ data, total: Number((countResult[0] as any).count), page: Number(page), limit: Number(limit) });
 });
 
@@ -86,7 +86,7 @@ router.get('/candidates', async (req: Request, res: Response) => {
   const offset = (Number(page) - 1) * Number(limit);
   const [data, countResult] = await Promise.all([
     query.clone().limit(Number(limit)).offset(offset),
-    query.clone().count('id as count'),
+    query.clone().clearSelect().clearOrder().count('id as count'),
   ]);
   return res.json({ data, total: Number((countResult[0] as any).count), page: Number(page), limit: Number(limit) });
 });
@@ -136,7 +136,7 @@ router.get('/logs', async (req: Request, res: Response) => {
 
   const [logs, countResult] = await Promise.all([
     query.clone().limit(Number(limit)).offset(Number(offset)),
-    query.clone().count('id as count'),
+    query.clone().clearSelect().clearOrder().count('id as count'),
   ]);
 
   // Summary stats

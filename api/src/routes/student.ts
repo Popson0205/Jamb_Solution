@@ -37,7 +37,8 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     // ── Step 3: Fire notifications (non-blocking)
-    if (result.status === 'allocated') {
+    // Fires for both new allocations AND re-requests from already-allocated students
+    if (result.status === 'allocated' || result.status === 'already_allocated') {
       sendAllocationNotifications({
         student: { full_name, email, phone, reg_number },
         centre: result.centre,

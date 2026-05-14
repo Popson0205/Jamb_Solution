@@ -45,6 +45,8 @@ const corsOptions = {
 // Preflight must be BEFORE all other middleware
 app.options('*', (0, cors_1.default)(corsOptions));
 app.use((0, cors_1.default)(corsOptions));
+// Trust Render's proxy (fixes X-Forwarded-For rate limit warning)
+app.set('trust proxy', 1);
 app.use((0, helmet_1.default)({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express_1.default.json());
 // ── Request logger — logs every API hit to request_logs table

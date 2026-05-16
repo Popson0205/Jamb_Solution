@@ -49,21 +49,24 @@ async function sendSMS(phone: string, message: string): Promise<void> {
   }
 
   const to = normalisePhone(phone);
+  console.log(`[AT-SMS] username=${username} to=${to} msgLen=${message.length}`);
   try {
     const AT  = AfricasTalking({ username, apiKey });
     const sms = AT.SMS;
     // Only pass 'from' if a sender ID is explicitly configured — omit it in sandbox
     const sendParams: any = { to: [to], message };
     if (process.env.AT_SENDER_ID) sendParams.from = process.env.AT_SENDER_ID;
+    console.log('[AT-SMS] sendParams:', JSON.stringify(sendParams));
     const res: any = await sms.send(sendParams);
+    console.log('[AT-SMS] raw response:', JSON.stringify(res));
     const recipient = res.SMSMessageData?.Recipients?.[0];
     if (recipient?.status === 'Success') {
       console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);
     } else {
-      console.error(`❌ SMS failed to ${to}:`, recipient?.status, recipient?.statusCode);
+      console.error(`❌ SMS failed to ${to}:`, JSON.stringify(recipient));
     }
   } catch (err: any) {
-    console.error(`❌ SMS failed to ${to}:`, err.message);
+    console.error(`❌ SMS failed to ${to}:`, err.message, err.response?.data || '');
   }
 }
 

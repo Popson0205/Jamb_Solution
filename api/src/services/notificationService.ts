@@ -148,12 +148,24 @@ function buildEmailHTML(d: AllocationDetails): string {
 </html>`;
 }
 
-// ── SMS message text
+// ── SMS message text (kept under 160 chars for Twilio trial compatibility)
 function buildSMSText(d: AllocationDetails): string {
   const arrival   = ft(d.batch.arrival_time || d.batch.arrival);
   const examStart = ft(d.batch.exam_start);
   const examEnd   = ft(d.batch.exam_end);
-  return `JAMB CBT ALLOCATION\n\nDear ${d.student.full_name},\nReg: ${d.student.reg_number}\n\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${formatDate(d.exam_date)}\nBatch ${d.batch.number}: Arrive ${arrival} | Exam ${examStart}-${examEnd}\nDistance: ${d.distance_km}km\n\nArrive 30 mins early. Bring JAMB slip + valid ID.`;
+  // Short date: "2026-05-14" → "14/05/2026"
+  const shortDate = (() => {
+    const dt = new Date(
+      typeof d.exam_date === 'string' && !d.exam_date.includes('T')
+        ? d.exam_date + 'T00:00:00'
+        : d.exam_date
+    );
+    if (isNaN(dt.getTime())) return String(d.exam_date);
+    const day   = String(dt.getDate()).padStart(2, '0');
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${dt.getFullYear()}`;
+  })();
+  return `JAMB CBT: ${d.student.reg_number}\nCentre: ${d.centre.name}\n${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} Exam: ${examStart}-${examEnd}\nBring JAMB slip+ID.`;
 }
 
 // ── Main export

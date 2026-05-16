@@ -1,4 +1,4 @@
-import twilio from 'twilio';
+import AfricasTalking from 'africastalking';
 
 interface AllocationDetails {
   student: { full_name: string; email?: string; phone?: string; reg_number: string };
@@ -38,22 +38,27 @@ function normalisePhone(phone: string): string {
   return `+234${clean}`;
 }
 
-// ── SMS via Twilio
+// ── SMS via Africa's Talking
 async function sendSMS(phone: string, message: string): Promise<void> {
-  const sid   = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from  = process.env.TWILIO_FROM_NUMBER;
+  const username = process.env.AT_USERNAME;
+  const apiKey   = process.env.AT_API_KEY;
 
-  if (!sid || !token || !from || !phone) {
-    console.log('SMS skipped — Twilio env vars not set');
+  if (!username || !apiKey || !phone) {
+    console.log('SMS skipped — Africa\'s Talking env vars not set');
     return;
   }
 
   const to = normalisePhone(phone);
   try {
-    const client = twilio(sid, token);
-    const msg = await client.messages.create({ body: message, from, to });
-    console.log(`✅ SMS sent to ${to} — SID: ${msg.sid}`);
+    const AT  = AfricasTalking({ username, apiKey });
+    const sms = AT.SMS;
+    const res: any = await sms.send({ to: [to], message, from: process.env.AT_SENDER_ID || undefined });
+    const recipient = res.SMSMessageData?.Recipients?.[0];
+    if (recipient?.status === 'Success') {
+      console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);
+    } else {
+      console.error(`❌ SMS failed to ${to}:`, recipient?.status, recipient?.statusCode);
+    }
   } catch (err: any) {
     console.error(`❌ SMS failed to ${to}:`, err.message);
   }

@@ -23,6 +23,12 @@ services:
         sync: false
       - key: WHATSAPP_PHONE_ID
         sync: false
+      - key: AT_USERNAME
+        sync: false
+      - key: AT_API_KEY
+        sync: false
+      - key: AT_SENDER_ID
+        sync: false
       - key: CLIENT_URL
         sync: false
       - key: ADMIN_URL

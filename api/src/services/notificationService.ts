@@ -52,7 +52,10 @@ async function sendSMS(phone: string, message: string): Promise<void> {
   try {
     const AT  = AfricasTalking({ username, apiKey });
     const sms = AT.SMS;
-    const res: any = await sms.send({ to: [to], message, from: process.env.AT_SENDER_ID || undefined });
+    // Only pass 'from' if a sender ID is explicitly configured — omit it in sandbox
+    const sendParams: any = { to: [to], message };
+    if (process.env.AT_SENDER_ID) sendParams.from = process.env.AT_SENDER_ID;
+    const res: any = await sms.send(sendParams);
     const recipient = res.SMSMessageData?.Recipients?.[0];
     if (recipient?.status === 'Success') {
       console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);

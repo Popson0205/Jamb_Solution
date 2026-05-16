@@ -173,9 +173,7 @@ function buildSMSText(d) {
         const month = String(dt.getMonth() + 1).padStart(2, '0');
         return `${day}/${month}/${dt.getFullYear()}`;
     })();
-    // Truncate centre name so total message stays under 160 chars for Twilio trial
-    const centreName = d.centre.name.length > 40 ? d.centre.name.substring(0, 37) + '...' : d.centre.name;
-    return `JAMB CBT: ${d.student.reg_number}\nCentre: ${centreName}\n${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} Exam: ${examStart}-${examEnd}\nBring JAMB slip+ID.`;
+    return `JAMB CBT ALLOCATION\nReg: ${d.student.reg_number}\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} | Exam: ${examStart}-${examEnd}\nBring JAMB slip + valid ID.`;
 }
 // ── Main export
 async function sendAllocationNotifications(details) {

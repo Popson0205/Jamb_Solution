@@ -153,9 +153,7 @@ function buildSMSText(d: AllocationDetails): string {
   const arrival   = ft(d.batch.arrival_time || d.batch.arrival);
   const examStart = ft(d.batch.exam_start);
   const examEnd   = ft(d.batch.exam_end);
-  const maps      = mapsLink(d.centre);
-
-  return `JAMB CBT ALLOCATION\n\nDear ${d.student.full_name},\nReg: ${d.student.reg_number}\n\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${formatDate(d.exam_date)}\nBatch ${d.batch.number}: Arrive ${arrival} | Exam ${examStart}-${examEnd}\nDistance: ${d.distance_km}km${maps ? `\n\nDirections: ${maps}` : ''}\n\nArrive 30 mins early. Bring JAMB slip + valid ID.`;
+  return `JAMB CBT ALLOCATION\n\nDear ${d.student.full_name},\nReg: ${d.student.reg_number}\n\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${formatDate(d.exam_date)}\nBatch ${d.batch.number}: Arrive ${arrival} | Exam ${examStart}-${examEnd}\nDistance: ${d.distance_km}km\n\nArrive 30 mins early. Bring JAMB slip + valid ID.`;
 }
 
 // ── Main export

@@ -44,7 +44,7 @@ async function sendSMS(phone: string, message: string): Promise<void> {
   const apiKey   = process.env.AT_API_KEY;
 
   if (!username || !apiKey || !phone) {
-    console.log('SMS skipped — Africa\'s Talking env vars not set');
+    console.log(`SMS skipped — missing: ${!username ? 'AT_USERNAME ' : ''}${!apiKey ? 'AT_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
     return;
   }
 

@@ -72,8 +72,22 @@ async function sendEmail(to, subject, html) {
                 email: process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng',
                 name: process.env.SENDGRID_FROM_NAME || 'JAMB CBT Allocation',
             },
+            replyTo: process.env.SENDGRID_FROM_EMAIL || 'noreply@jamb.gov.ng',
             subject,
             html,
+            // Headers to improve deliverability and reduce spam score
+            headers: {
+                'X-Priority': '1',
+                'X-Mailer': 'JAMB CBT Allocation System',
+                'Importance': 'high',
+            },
+            mailSettings: {
+                sandboxMode: { enable: false },
+            },
+            trackingSettings: {
+                clickTracking: { enable: false },
+                openTracking: { enable: false },
+            },
         });
         console.log(`✅ Email sent to ${to}`);
     }

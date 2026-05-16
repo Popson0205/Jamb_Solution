@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendAllocationNotifications = sendAllocationNotifications;
-const twilio_1 = __importDefault(require("twilio"));
+const africastalking_1 = __importDefault(require("africastalking"));
 // Strip seconds: "07:00:00" → "07:00"
 const ft = (t) => (t || '').substring(0, 5);
 // Format date: "2026-05-14" → "Wednesday, 14 May 2026"
@@ -38,23 +38,36 @@ function normalisePhone(phone) {
         return `+${clean}`;
     return `+234${clean}`;
 }
-// ── SMS via Twilio
+// ── SMS via Africa's Talking
 async function sendSMS(phone, message) {
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_FROM_NUMBER;
-    if (!sid || !token || !from || !phone) {
-        console.log('SMS skipped — Twilio env vars not set');
+    const username = process.env.AT_USERNAME;
+    const apiKey = process.env.AT_API_KEY;
+    if (!username || !apiKey || !phone) {
+        console.log(`SMS skipped — missing: ${!username ? 'AT_USERNAME ' : ''}${!apiKey ? 'AT_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
         return;
     }
     const to = normalisePhone(phone);
+    console.log(`[AT-SMS] username=${username} to=${to} msgLen=${message.length}`);
     try {
-        const client = (0, twilio_1.default)(sid, token);
-        const msg = await client.messages.create({ body: message, from, to });
-        console.log(`✅ SMS sent to ${to} — SID: ${msg.sid}`);
+        const AT = (0, africastalking_1.default)({ username, apiKey });
+        const sms = AT.SMS;
+        // Only pass 'from' if a sender ID is explicitly configured — omit it in sandbox
+        const sendParams = { to: [to], message };
+        if (process.env.AT_SENDER_ID)
+            sendParams.from = process.env.AT_SENDER_ID;
+        console.log('[AT-SMS] sendParams:', JSON.stringify(sendParams));
+        const res = await sms.send(sendParams);
+        console.log('[AT-SMS] raw response:', JSON.stringify(res));
+        const recipient = res.SMSMessageData?.Recipients?.[0];
+        if (recipient?.status === 'Success') {
+            console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);
+        }
+        else {
+            console.error(`❌ SMS failed to ${to}:`, JSON.stringify(recipient));
+        }
     }
     catch (err) {
-        console.error(`❌ SMS failed to ${to}:`, err.message);
+        console.error(`❌ SMS failed to ${to}:`, err.message, err.response?.data || '');
     }
 }
 // ── Email via SendGrid HTTP API (not SMTP — works on Render free tier)
@@ -144,13 +157,25 @@ function buildEmailHTML(d) {
 </body>
 </html>`;
 }
-// ── SMS message text
+// ── SMS message text (kept under 160 chars for Twilio trial compatibility)
 function buildSMSText(d) {
     const arrival = ft(d.batch.arrival_time || d.batch.arrival);
     const examStart = ft(d.batch.exam_start);
     const examEnd = ft(d.batch.exam_end);
-    const maps = mapsLink(d.centre);
-    return `JAMB CBT ALLOCATION\n\nDear ${d.student.full_name},\nReg: ${d.student.reg_number}\n\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${formatDate(d.exam_date)}\nBatch ${d.batch.number}: Arrive ${arrival} | Exam ${examStart}-${examEnd}\nDistance: ${d.distance_km}km${maps ? `\n\nDirections: ${maps}` : ''}\n\nArrive 30 mins early. Bring JAMB slip + valid ID.`;
+    // Short date: "2026-05-14" → "14/05/2026"
+    const shortDate = (() => {
+        const dt = new Date(typeof d.exam_date === 'string' && !d.exam_date.includes('T')
+            ? d.exam_date + 'T00:00:00'
+            : d.exam_date);
+        if (isNaN(dt.getTime()))
+            return String(d.exam_date);
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        return `${day}/${month}/${dt.getFullYear()}`;
+    })();
+    // Truncate centre name so total message stays under 160 chars for Twilio trial
+    const centreName = d.centre.name.length > 40 ? d.centre.name.substring(0, 37) + '...' : d.centre.name;
+    return `JAMB CBT: ${d.student.reg_number}\nCentre: ${centreName}\n${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} Exam: ${examStart}-${examEnd}\nBring JAMB slip+ID.`;
 }
 // ── Main export
 async function sendAllocationNotifications(details) {

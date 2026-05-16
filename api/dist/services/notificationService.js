@@ -11,9 +11,12 @@ const ft = (t) => (t || '').substring(0, 5);
 function formatDate(dateStr) {
     if (!dateStr)
         return 'N/A';
-    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+    // Handle Date objects, ISO strings, and plain date strings
+    const d = dateStr instanceof Date
+        ? dateStr
+        : new Date(typeof dateStr === 'string' && !dateStr.includes('T') ? dateStr + 'T00:00:00' : dateStr);
     if (isNaN(d.getTime()))
-        return dateStr;
+        return String(dateStr);
     return d.toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 // Google Maps directions link

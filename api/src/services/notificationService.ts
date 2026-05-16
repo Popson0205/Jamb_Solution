@@ -12,10 +12,13 @@ interface AllocationDetails {
 const ft = (t: string) => (t || '').substring(0, 5);
 
 // Format date: "2026-05-14" → "Wednesday, 14 May 2026"
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: any): string {
   if (!dateStr) return 'N/A';
-  const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return dateStr;
+  // Handle Date objects, ISO strings, and plain date strings
+  const d = dateStr instanceof Date
+    ? dateStr
+    : new Date(typeof dateStr === 'string' && !dateStr.includes('T') ? dateStr + 'T00:00:00' : dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
   return d.toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 

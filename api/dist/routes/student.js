@@ -65,4 +65,25 @@ router.get('/allocation/:regNumber', async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 });
+// POST /api/student/demo-reset — clears allocation for a student so demo can re-run
+// Only works in non-production or when DEMO_MODE=true
+router.post('/demo-reset', async (req, res) => {
+    if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
+        return res.status(403).json({ error: 'Not available in production' });
+    }
+    const { reg_number } = req.body;
+    if (!reg_number)
+        return res.status(400).json({ error: 'reg_number required' });
+    try {
+        const student = await (0, db_1.db)('students').where('reg_number', reg_number.toUpperCase()).first();
+        if (student) {
+            await (0, db_1.db)('allocations').where('student_id', student.id).delete();
+            await (0, db_1.db)('students').where('id', student.id).delete();
+        }
+        return res.json({ ok: true, message: `Reset ${reg_number}` });
+    }
+    catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
 exports.default = router;

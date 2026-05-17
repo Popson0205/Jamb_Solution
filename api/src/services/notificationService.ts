@@ -1,4 +1,4 @@
-import AfricasTalking from 'africastalking';
+import axios from 'axios';
 
 interface AllocationDetails {
   student: { full_name: string; email?: string; phone?: string; reg_number: string };
@@ -38,35 +38,36 @@ function normalisePhone(phone: string): string {
   return `+234${clean}`;
 }
 
-// ── SMS via Africa's Talking
+// ── SMS via Termii
 async function sendSMS(phone: string, message: string): Promise<void> {
-  const username = process.env.AT_USERNAME;
-  const apiKey   = process.env.AT_API_KEY;
+  const apiKey   = process.env.TERMII_API_KEY;
+  const senderId = process.env.TERMII_SENDER_ID || 'N-Alert';
 
-  if (!username || !apiKey || !phone) {
-    console.log(`SMS skipped — missing: ${!username ? 'AT_USERNAME ' : ''}${!apiKey ? 'AT_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
+  if (!apiKey || !phone) {
+    console.log(`SMS skipped — missing: ${!apiKey ? 'TERMII_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
     return;
   }
 
   const to = normalisePhone(phone);
-  console.log(`[AT-SMS] username=${username} to=${to} msgLen=${message.length}`);
   try {
-    const AT  = AfricasTalking({ username, apiKey });
-    const sms = AT.SMS;
-    // Only pass 'from' if a sender ID is explicitly configured — omit it in sandbox
-    const sendParams: any = { to: [to], message };
-    if (process.env.AT_SENDER_ID) sendParams.from = process.env.AT_SENDER_ID;
-    console.log('[AT-SMS] sendParams:', JSON.stringify(sendParams));
-    const res: any = await sms.send(sendParams);
-    console.log('[AT-SMS] raw response:', JSON.stringify(res));
-    const recipient = res.SMSMessageData?.Recipients?.[0];
-    if (recipient?.status === 'Success') {
-      console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);
+    const payload = {
+      to,
+      from: senderId,
+      sms: message,
+      type: 'plain',
+      channel: 'generic',
+      api_key: apiKey,
+    };
+    console.log(`[Termii] Sending to ${to} via sender=${senderId}`);
+    const res = await axios.post('https://v3.api.termii.com/api/sms/send', payload);
+    console.log('[Termii] Response:', JSON.stringify(res.data));
+    if (res.data?.message_id || res.data?.message === 'Successfully Sent') {
+      console.log(`✅ SMS sent to ${to} — ID: ${res.data.message_id}`);
     } else {
-      console.error(`❌ SMS failed to ${to}:`, JSON.stringify(recipient));
+      console.error(`❌ SMS failed to ${to}:`, JSON.stringify(res.data));
     }
   } catch (err: any) {
-    console.error(`❌ SMS failed to ${to}:`, err.message, err.response?.data || '');
+    console.error(`❌ SMS failed to ${to}:`, err.response?.data || err.message);
   }
 }
 

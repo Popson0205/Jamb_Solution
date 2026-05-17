@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendAllocationNotifications = sendAllocationNotifications;
-const africastalking_1 = __importDefault(require("africastalking"));
+const axios_1 = __importDefault(require("axios"));
 // Strip seconds: "07:00:00" → "07:00"
 const ft = (t) => (t || '').substring(0, 5);
 // Format date: "2026-05-14" → "Wednesday, 14 May 2026"
@@ -38,36 +38,36 @@ function normalisePhone(phone) {
         return `+${clean}`;
     return `+234${clean}`;
 }
-// ── SMS via Africa's Talking
+// ── SMS via Termii
 async function sendSMS(phone, message) {
-    const username = process.env.AT_USERNAME;
-    const apiKey = process.env.AT_API_KEY;
-    if (!username || !apiKey || !phone) {
-        console.log(`SMS skipped — missing: ${!username ? 'AT_USERNAME ' : ''}${!apiKey ? 'AT_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
+    const apiKey = process.env.TERMII_API_KEY;
+    const senderId = process.env.TERMII_SENDER_ID || 'N-Alert';
+    if (!apiKey || !phone) {
+        console.log(`SMS skipped — missing: ${!apiKey ? 'TERMII_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
         return;
     }
     const to = normalisePhone(phone);
-    console.log(`[AT-SMS] username=${username} to=${to} msgLen=${message.length}`);
     try {
-        const AT = (0, africastalking_1.default)({ username, apiKey });
-        const sms = AT.SMS;
-        // Only pass 'from' if a sender ID is explicitly configured — omit it in sandbox
-        const sendParams = { to: [to], message };
-        if (process.env.AT_SENDER_ID)
-            sendParams.from = process.env.AT_SENDER_ID;
-        console.log('[AT-SMS] sendParams:', JSON.stringify(sendParams));
-        const res = await sms.send(sendParams);
-        console.log('[AT-SMS] raw response:', JSON.stringify(res));
-        const recipient = res.SMSMessageData?.Recipients?.[0];
-        if (recipient?.status === 'Success') {
-            console.log(`✅ SMS sent to ${to} — MessageId: ${recipient.messageId}`);
+        const payload = {
+            to,
+            from: senderId,
+            sms: message,
+            type: 'plain',
+            channel: 'generic',
+            api_key: apiKey,
+        };
+        console.log(`[Termii] Sending to ${to} via sender=${senderId}`);
+        const res = await axios_1.default.post('https://v3.api.termii.com/api/sms/send', payload);
+        console.log('[Termii] Response:', JSON.stringify(res.data));
+        if (res.data?.message_id || res.data?.message === 'Successfully Sent') {
+            console.log(`✅ SMS sent to ${to} — ID: ${res.data.message_id}`);
         }
         else {
-            console.error(`❌ SMS failed to ${to}:`, JSON.stringify(recipient));
+            console.error(`❌ SMS failed to ${to}:`, JSON.stringify(res.data));
         }
     }
     catch (err) {
-        console.error(`❌ SMS failed to ${to}:`, err.message, err.response?.data || '');
+        console.error(`❌ SMS failed to ${to}:`, err.response?.data || err.message);
     }
 }
 // ── Email via SendGrid HTTP API (not SMTP — works on Render free tier)

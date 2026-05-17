@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendAllocationNotifications = sendAllocationNotifications;
-const axios_1 = __importDefault(require("axios"));
+const twilio_1 = __importDefault(require("twilio"));
 // Strip seconds: "07:00:00" → "07:00"
 const ft = (t) => (t || '').substring(0, 5);
 // Format date: "2026-05-14" → "Wednesday, 14 May 2026"
@@ -38,36 +38,23 @@ function normalisePhone(phone) {
         return `+${clean}`;
     return `+234${clean}`;
 }
-// ── SMS via Termii
+// ── SMS via Twilio
 async function sendSMS(phone, message) {
-    const apiKey = process.env.TERMII_API_KEY;
-    const senderId = process.env.TERMII_SENDER_ID || 'N-Alert';
-    if (!apiKey || !phone) {
-        console.log(`SMS skipped — missing: ${!apiKey ? 'TERMII_API_KEY ' : ''}${!phone ? 'phone' : ''}`);
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM_NUMBER;
+    if (!sid || !token || !from || !phone) {
+        console.log(`SMS skipped — missing: ${!sid ? 'TWILIO_ACCOUNT_SID ' : ''}${!token ? 'TWILIO_AUTH_TOKEN ' : ''}${!from ? 'TWILIO_FROM_NUMBER ' : ''}${!phone ? 'phone' : ''}`);
         return;
     }
     const to = normalisePhone(phone);
     try {
-        const payload = {
-            to,
-            from: senderId,
-            sms: message,
-            type: 'plain',
-            channel: 'generic',
-            api_key: apiKey,
-        };
-        console.log(`[Termii] Sending to ${to} via sender=${senderId}`);
-        const res = await axios_1.default.post('https://v3.api.termii.com/api/sms/send', payload);
-        console.log('[Termii] Response:', JSON.stringify(res.data));
-        if (res.data?.message_id || res.data?.message === 'Successfully Sent') {
-            console.log(`✅ SMS sent to ${to} — ID: ${res.data.message_id}`);
-        }
-        else {
-            console.error(`❌ SMS failed to ${to}:`, JSON.stringify(res.data));
-        }
+        const client = (0, twilio_1.default)(sid, token);
+        const msg = await client.messages.create({ body: message, from, to });
+        console.log(`✅ SMS sent to ${to} — SID: ${msg.sid}`);
     }
     catch (err) {
-        console.error(`❌ SMS failed to ${to}:`, err.response?.data || err.message);
+        console.error(`❌ SMS failed to ${to}:`, err.message);
     }
 }
 // ── Email via SendGrid HTTP API (not SMTP — works on Render free tier)
@@ -173,7 +160,9 @@ function buildSMSText(d) {
         const month = String(dt.getMonth() + 1).padStart(2, '0');
         return `${day}/${month}/${dt.getFullYear()}`;
     })();
-    return `JAMB CBT ALLOCATION\nReg: ${d.student.reg_number}\nCentre: ${d.centre.name}\nAddress: ${d.centre.address}, ${d.centre.lga}, ${d.centre.state}\nDate: ${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} | Exam: ${examStart}-${examEnd}\nBring JAMB slip + valid ID.`;
+    // Keep under 160 chars for Twilio trial (1 segment limit)
+    const centreName = d.centre.name.length > 40 ? d.centre.name.substring(0, 37) + '...' : d.centre.name;
+    return `JAMB CBT: ${d.student.reg_number}\nCentre: ${centreName}\n${shortDate} Batch ${d.batch.number}\nArrive: ${arrival} Exam: ${examStart}-${examEnd}\nBring JAMB slip+ID.`;
 }
 // ── Main export
 async function sendAllocationNotifications(details) {

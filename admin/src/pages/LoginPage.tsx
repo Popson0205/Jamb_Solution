@@ -21,6 +21,7 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#006400', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <form onSubmit={submit} style={{ background: 'white', borderRadius: '8px', padding: '36px', width: '360px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+        <img src="/jamb-logo.png" alt="JAMB Logo" style={{ height: '72px', width: '72px', objectFit: 'contain', marginBottom: '8px' }} />
         <h1 style={{ color: '#006400', fontSize: '20px', marginBottom: '4px' }}>JAMB CBT Admin</h1>
         <p style={{ color: '#666', fontSize: '13px', marginBottom: '24px' }}>Sign in to manage allocations</p>
         <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Email</label>

@@ -9,6 +9,7 @@ export default function Layout() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={{ width: '220px', background: '#006400', color: 'white', padding: '20px 12px', flexShrink: 0, position: 'relative' }}>
         <div style={{ padding: '0 8px 20px', borderBottom: '1px solid rgba(255,255,255,0.2)', marginBottom: '16px' }}>
+          <img src="/jamb-logo.png" alt="JAMB" style={{ height: '48px', width: '48px', objectFit: 'contain', marginBottom: '6px' }} />
           <h2 style={{ fontSize: '15px', margin: 0 }}>JAMB CBT Admin</h2>
           <p style={{ fontSize: '12px', opacity: 0.7, margin: '4px 0 0' }}>{user?.full_name}</p>
         </div>

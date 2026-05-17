@@ -80,7 +80,8 @@ export default function RegisterPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f0', fontFamily: 'Arial, sans-serif' }}>
-      <header style={{ background: '#006400', color: 'white', padding: '16px 24px', textAlign: 'center' }}>
+      <header style={{ background: '#006400', color: 'white', padding: '12px 24px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <img src="/jamb-logo.png" alt="JAMB Logo" style={{ height: '52px', width: '52px', objectFit: 'contain' }} />
         <h1 style={{ margin: 0, fontSize: '20px' }}>JAMB CBT Centre Allocation</h1>
         <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.85 }}>
           Submit your biodata to receive your nearest exam centre

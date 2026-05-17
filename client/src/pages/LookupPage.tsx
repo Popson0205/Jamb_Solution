@@ -23,6 +23,7 @@ export default function LookupPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f0', fontFamily: 'Arial, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: 'white', borderRadius: '8px', padding: '32px', maxWidth: '420px', width: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <img src="/jamb-logo.png" alt="JAMB Logo" style={{ height: '64px', width: '64px', objectFit: 'contain', display: 'block', margin: '0 auto 10px' }} />
         <h2 style={{ color: '#006400', marginTop: 0 }}>Look Up Your Allocation</h2>
         <input value={regNumber} onChange={e => setRegNumber(e.target.value)} placeholder="Enter Registration Number" onKeyDown={e => e.key === 'Enter' && lookup()} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '15px', boxSizing: 'border-box' }} />
         {error && <p style={{ color: '#c0392b', fontSize: '14px', margin: '8px 0' }}>⚠️ {error}</p>}
